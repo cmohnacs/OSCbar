@@ -17,9 +17,9 @@ def amplitude_scale(amplitude):
     return amplitude
 
 
-# ------------------------------ Wave Calculators ------------------------------
+# ------------------------------ Wave Generators -------------------------------
 
-def wave(sample_block, wave_type='sine_wave', amplitude=0.5, frequency=440):
+def wave_generator(sample_block, wave_type='sine_wave', amplitude=0.5, frequency=440):
     """ wave type selector """
     if wave_type == 'sine_wave':
         return sine_wave(sample_block, amplitude, frequency)
@@ -70,14 +70,26 @@ def white_noise(sample_block, amplitude):
 class Oscillator:
     """ Oscillator """
 
-    def __init__(self, samplerate):
+    def __init__(self, samplerate, wave_type, amplitude, frequency):
         self.stream = None
         self.samplerate = samplerate
+        self.wave_type = wave_type
+        self.amplitude = amplitude_scale(amplitude)
+        self.frequency = frequency
 
-    def play(self, wave_type, amplitude, frequency):
+    def set_wave_type(self, wave_type):
+        self.wave_type = wave_type
+
+    def set_amplitude(self, amplitude):
+        self.amplitude = amplitude
+
+    def set_frequency(self, frequency):
+        self.frequency = frequency
+
+    def play(self): #, wave_type, amplitude, frequency
         """ stream to output """
 
-        amplitude = amplitude_scale(amplitude)
+        #amplitude = amplitude_scale(self.amplitude)
 
         start_idx = 0
 
@@ -89,7 +101,10 @@ class Oscillator:
             sample_block = (start_idx + np.arange(frames)) / self.samplerate
             sample_block = sample_block.reshape(-1, 1)
             # calculate waveform for given samples
-            outdata[:] = wave(sample_block, wave_type, amplitude, frequency)
+            outdata[:] = wave_generator(sample_block,
+                                        self.wave_type,
+                                        self.amplitude,
+                                        self.frequency)
             # update index
             start_idx += frames
 
@@ -103,7 +118,6 @@ class Oscillator:
         """ stop the oscillator and close the stream """
         self.stream.stop()
         self.stream.close()
-        self.stream = None
 
 
 # ---------------------------------- Run Time ----------------------------------
@@ -113,8 +127,10 @@ if __name__ == '__main__':
     import time
 
     # beep
-    osc = Oscillator(samplerate=44100)
-    HZ = 440
-    osc.play(wave_type='sine_wave', amplitude=0.5, frequency=HZ)
+    osc = Oscillator(samplerate=44100, wave_type='sine_wave',
+                     amplitude=0.5, frequency=440)
+    #HZ = 440
+    #osc.play(wave_type='sine_wave', amplitude=0.5, frequency=HZ)
+    osc.play()
     time.sleep(1)
     osc.stop()
