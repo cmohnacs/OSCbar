@@ -5,28 +5,77 @@ Calibration oscillator for the macOS menu bar
 """
 
 import math
+import time
 import rumps
 from oscillator import Oscillator
 
-#rumps.debug_mode(True)
+rumps.debug_mode(True)
 
 
 # ------------------------------ Helper Functions ------------------------------
 
 def slider_to_freq(value):
-    """ convert slider value to frequency (20Hz-20kHz) """
-    value *= 0.0001
-    return round(math.pow(2, value))
+    """
+    convert slider value to frequency (20Hz-20kHz)
 
-def freq_to_slider(value):
-    """ convert frequency (20Hz-20kHz) to slider value """
-    value = math.log2(value)
-    return value * 10000
+    base-2 logarithmic slider
+    """
+    return round(math.pow(2, value * 1e-4))
 
-def freq_title_format(frequency):
-    """ Frequency: 440 """
-    return f"Frequency: {frequency}"
+def freq_to_slider(freq):
+    """
+    convert frequency (20Hz-20kHz) to slider value
 
+    base-2 logarithmic slider
+    """
+    return math.log2(freq) * 1e4
+
+def freq_title_format(freq):
+    """
+    e.g. Frequency: 440 Hz
+    e.g. Frequency: 15.0 kHz
+    """
+    if freq < 10000:
+        title = f"Frequency: {freq} Hz"
+    elif freq >= 10000:
+        freq = round(freq * 1e-3, 1)
+        title = f"Frequency: {freq} kHz"
+    return title
+
+def slider_to_amp(value):
+    """
+    convert slider value to amplitude
+
+    y = a·exp(b·x)
+
+    x = volume slider position
+    y = multiplication factor for signed sound wave data
+    a = 1e-3 (60dB dynamic range)
+    b = 6.908 (60dB dynamic range)
+
+    REF: https://www.dr-lex.be/info-stuff/volumecontrols.html
+    """
+    amp = round(1e-3 * math.exp(6.908 * value), 3)
+    # smooth rolloff
+    if value < 0.001:
+        amp *= value * 10
+    return amp
+
+def amp_to_slider(amp):
+    """
+    convert amplitude to slider value
+
+    x = ln(y/a) / b
+    """
+    return math.log(amp / 1e-3) / 6.908
+
+def amp_title_format(amp):
+    """ e.g. Volume: -0 dBFS """
+    if amp == 0:
+        amp = "∞"
+    else:
+        amp = round(amp, 2)
+    return f"Volume: -{amp} dBFS"
 
 # -------------------------------- Menu Bar App --------------------------------
 
@@ -34,16 +83,18 @@ class BarOscApp:
     """ Bar Osc object """
 
     def __init__(self):
+        # initial oscillator settings
         self.samplerate = 44100
         self.wave_type = "sine_wave"
-        self.amplitude = 0.5
+        self.amplitude = 0.2
         self.frequency = 440
+        # application instance
         self.app = rumps.App("Bar Osc")
         # set up menu
         self.build_menu()
-        self.ready_menu()
+        self.osc_ready_menu()
         # single oscillator instance for the app
-        self.osc = Oscillator( self.samplerate,
+        self.osc = Oscillator(  self.samplerate,
                                 self.wave_type,
                                 self.amplitude,
                                 self.frequency)
@@ -55,24 +106,27 @@ class BarOscApp:
             title="Start Oscillator")
         self.stop_button = rumps.MenuItem(                  # Stop Osc
             title="Stop Oscillator")
-        self.amp_title = rumps.MenuItem(                   # Volume title
-            title="Volume",
+        self.amp_title = rumps.MenuItem(                    # Volume title
+            title=amp_title_format(self.amplitude),
             callback=None)
-        self.amp_slider = rumps.SliderMenuItem(            # Volume slider
-            value=self.amplitude,
+        self.amp_slider = rumps.SliderMenuItem(             # Volume slider
+            value=amp_to_slider(self.amplitude),
             min_value=0.0,
             max_value=1.0,
             callback=self.adj_amp,
-            dimensions=(180, 20))
-        self.sine_button = rumps.MenuItem(                  # Sine Wave
+            dimensions=(200, 20))
+        self.sine_wave_button = rumps.MenuItem(                  # Sine Wave
             title="Sine Wave",
             callback=None)
-        self.square_button = rumps.MenuItem(                # Square Wave
+        self.square_wave_button = rumps.MenuItem(                # Square Wave
             title="Square Wave",
             callback=self.set_square_wave)
         self.white_noise_button = rumps.MenuItem(           # White Noise
             title="White Noise",
             callback=self.set_white_noise)
+        self.pink_noise_button = rumps.MenuItem(            # Pink Noise
+            title="Pink Noise",
+            callback=self.set_pink_noise)
         self.freq_title = rumps.MenuItem(                   # Frequency: title
             title=freq_title_format(self.frequency),
             callback=None)
@@ -81,9 +135,18 @@ class BarOscApp:
             min_value=freq_to_slider(20),                   # 20Hz - 20kHz
             max_value=freq_to_slider(20000),
             callback=self.adj_freq,
-            dimensions=(180, 20))
-        self.check_updates_button = rumps.MenuItem(         # Check for updates
-            title="Check for updates...",
+            dimensions=(200, 20))
+        self.octave_button = rumps.MenuItem(                # Octave Walk
+            title="Octave Walk",
+            callback=self.octave_walk)
+        self.octave_thirds_button = rumps.MenuItem(         # Octave Walk 1/3
+            title="Octave Walk  ⅓",
+            callback=None)
+        self.noise_pan_button = rumps.MenuItem(             # Noise Panning
+            title="Noise Panning",
+            callback=None)
+        self.settings_button = rumps.MenuItem(              # Settings...
+            title="Settings...",
             callback=None)
         #populate menu
         self.app.menu =    [self.start_button,
@@ -92,82 +155,154 @@ class BarOscApp:
                             self.amp_title,
                             self.amp_slider,
                             None,
-                            self.sine_button,
-                            self.square_button,
+                            self.sine_wave_button,
+                            self.square_wave_button,
                             self.white_noise_button,
+                            self.pink_noise_button,
                             None,
                             self.freq_title,
                             self.freq_slider,
                             None,
-                            self.check_updates_button]
+                            self.octave_button,
+                            self.octave_thirds_button,
+                            self.noise_pan_button,
+                            None,
+                            self.settings_button]
 
-    def ready_menu(self):
-        """ menu bar while not playing osc """
+
+# ------------------------ Menu Bar App: Menu UI Methods -----------------------
+
+    def osc_ready_menu(self):
+        """ menu while not playing osc """
         self.app.title = "🎛"
         self.start_button.set_callback(self.start_osc)
         self.stop_button.set_callback(None)
 
-    def busy_menu(self):
-        """ menu bar while playing osc """
+    def osc_busy_menu(self):
+        """ menu while playing osc """
         self.app.title = "🔊"
         self.start_button.set_callback(None)
         self.stop_button.set_callback(self.stop_osc)
 
+    def wave_change_menu(self, old_wave_type, new_wave_type):
+        """ menu change when selecting new wave type """
+
+        wave_buttons = {'sine_wave':   self.sine_wave_button,
+                        'square_wave': self.square_wave_button,
+                        'white_noise': self.white_noise_button,
+                        'pink_noise':  self.pink_noise_button}
+        wave_methods = {'sine_wave':   self.set_sine_wave,
+                        'square_wave': self.set_square_wave,
+                        'white_noise': self.set_white_noise,
+                        'pink_noise':  self.set_pink_noise}
+
+        wave_buttons[new_wave_type].set_callback(None)
+        wave_buttons[old_wave_type].set_callback(wave_methods[old_wave_type])
+
+
+# --------------------------- Menu Bar App: Callbacks --------------------------
+
     def start_osc(self, sender):
         """ Start Oscillator callback """
         # update menu and title
-        self.busy_menu()
+        self.osc_busy_menu()
         # generate osc tone
         self.osc.play()
 
     def stop_osc(self, sender):
         """ Stop Oscillator callback """
         # update menu and title
-        self.ready_menu()
+        self.osc_ready_menu()
         # kill osc tone
         self.osc.stop()
 
     def set_sine_wave(self, sender):
         """ Sine Wave callback """
-        self.sine_button.set_callback(None)
-        self.square_button.set_callback(self.set_square_wave)
-        self.white_noise_button.set_callback(self.set_white_noise)
-
-        self.wave_type = 'sine_wave'
-        self.osc.set_wave_type('sine_wave')
+        # update menu items
+        self.wave_change_menu(self.osc.wave_type, 'sine_wave')
+        # update oscillator
+        self.osc.wave_type = 'sine_wave'
 
     def set_square_wave(self, sender):
         """ Square Wave callback """
-        self.sine_button.set_callback(self.set_sine_wave)
-        self.square_button.set_callback(None)
-        self.white_noise_button.set_callback(self.set_white_noise)
-
-        self.wave_type = 'square_wave'
-        self.osc.set_wave_type('square_wave')
+        # update menu items
+        self.wave_change_menu(self.osc.wave_type, 'square_wave')
+        # update oscillator
+        self.osc.wave_type = 'square_wave'
 
     def set_white_noise(self, sender):
         """ White Noise callback """
-        self.sine_button.set_callback(self.set_sine_wave)
-        self.square_button.set_callback(self.set_square_wave)
-        self.white_noise_button.set_callback(None)
+        # update menu items
+        self.wave_change_menu(self.osc.wave_type, 'white_noise')
+        #update oscillator
+        self.osc.wave_type = 'white_noise'
 
-        self.wave_type = 'white_noise'
-        self.osc.set_wave_type('white_noise')
+    def set_pink_noise(self, sender):
+        """ Pink Noise callback """
+        # update menu items
+        self.wave_change_menu(self.osc.wave_type, 'pink_noise')
+        #update oscillator
+        self.osc.wave_type = 'pink_noise'
+
+    def octave_walk(self, sender):
+        """
+        Octave Walk callback
+
+        Walk up 9 octaves with sine wave: A0 (27.5 Hz) - A8 (7040 Hz)
+        """
+        # stop osc if playing
+        if not self.osc.stream is None:
+            self.stop_osc(sender=None)
+        # remember settings
+        retain_wave = self.osc.wave_type
+        retain_freq = self.osc.frequency
+        # play each octave for 1 second
+        self.osc.wave_type = 'sine_wave'
+        self.osc.frequency = 27.5
+        for octave in range(9):
+            self.osc.play()
+            time.sleep(1)
+            self.osc.stop()
+            self.osc.frequency *= 2
+        # return to original settings
+        self.osc.wave_type = retain_wave
+        self.osc.frequency = retain_freq
+
+    def octave_walk_thirds(self, sender):
+        """
+        1/3 Octave Walk callback
+
+        Walk up 9 octaves by 1/3 octaves: A0 (27.5 Hz) - A8 (7040 Hz)
+        """
+        pass
+
+    def noise_panning(self, sender):
+        """
+        Noise Panning callback
+
+        Pan noise to different channels for stereo calibration
+        """
+        pass
 
     def adj_freq(self, sender):
         """ Frequency slider callback """
-        # when slider adjusted, update title and osc freq
-        self.frequency = slider_to_freq(self.freq_slider.value)
-        self.freq_title.title = freq_title_format(self.frequency)
-        self.osc.set_frequency(self.frequency)
+        # update frequency title
+        frequency = slider_to_freq(self.freq_slider.value)
+        self.freq_title.title = freq_title_format(frequency)
+        # update oscillator
+        self.osc.frequency = frequency
 
     def adj_amp(self, sender):
         """ Amplitude slider callback """
-        self.amplitude = self.amp_slider.value
-        self.osc.set_amplitude(self.amplitude)
+        # update frequency title
+        amp = slider_to_amp(self.amp_slider.value)
+        print('SLIDER ===>', self.amp_slider.value, 'AMP ===>', amp)
+        self.amp_title.title = amp_title_format(amp)
+        # update oscillator
+        self.osc.amplitude = amp
 
-    def check_updates(self, sender):
-        """ Check for updates... callback """
+    def change_settings(self, sender):
+        """ Settings... callback """
         pass
 
     def run(self):
