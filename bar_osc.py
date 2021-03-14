@@ -4,6 +4,8 @@ Bar Osc App
 Calibration oscillator for the macOS menu bar
 """
 
+import warnings
+import functools
 import math
 import time
 import rumps
@@ -13,6 +15,21 @@ rumps.debug_mode(True)
 
 
 # ------------------------------ Helper Functions ------------------------------
+
+def deprecated(func):
+    """
+    This is a decorator which can be used to mark functions as deprecated. It
+    will result in a warning being emitted when the function is used.
+    """
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        warnings.simplefilter('default', DeprecationWarning)  # reset filter
+        return func(*args, **kwargs)
+    return new_func
 
 def slider_to_freq(value):
     """
@@ -42,9 +59,10 @@ def freq_title_format(freq):
         title = f"Frequency: {freq} kHz"
     return title
 
+@deprecated
 def slider_to_amp(value):
     """
-    convert slider value to amplitude
+    convert slider value to amplitude with 60dB dynamic range
 
     y = a·exp(b·x)
 
@@ -61,6 +79,7 @@ def slider_to_amp(value):
         amp *= value * 10
     return amp
 
+@deprecated
 def amp_to_slider(amp):
     """
     convert amplitude to slider value
@@ -70,12 +89,18 @@ def amp_to_slider(amp):
     return math.log(amp / 1e-3) / 6.908
 
 def amp_title_format(amp):
-    """ e.g. Volume: -0 dBFS """
-    if amp == 0:
-        amp = "∞"
-    else:
-        amp = round(amp, 2)
-    return f"Volume: -{amp} dBFS"
+    """
+    e.g. Volume: -0.0 dBFS
+    e.g. Volume: -∞ dBFS
+    """
+    try:
+        dBFS = round(20 * math.log10(amp), 1)
+    except ValueError:
+        dBFS = "-∞"
+    if dBFS == 0.0:
+        dBFS = "-0.0"
+    print(f'AMP ===> {amp}, dBFS ===> {dBFS}')
+    return f"Volume: {dBFS} dBFS"
 
 # -------------------------------- Menu Bar App --------------------------------
 
@@ -86,7 +111,7 @@ class BarOscApp:
         # initial oscillator settings
         self.samplerate = 44100
         self.wave_type = "sine_wave"
-        self.amplitude = 0.2
+        self.amplitude = 0.5
         self.frequency = 440
         # application instance
         self.app = rumps.App("Bar Osc")
@@ -110,7 +135,7 @@ class BarOscApp:
             title=amp_title_format(self.amplitude),
             callback=None)
         self.amp_slider = rumps.SliderMenuItem(             # Volume slider
-            value=amp_to_slider(self.amplitude),
+            value=self.amplitude,
             min_value=0.0,
             max_value=1.0,
             callback=self.adj_amp,
@@ -286,20 +311,16 @@ class BarOscApp:
 
     def adj_freq(self, sender):
         """ Frequency slider callback """
-        # update frequency title
         frequency = slider_to_freq(self.freq_slider.value)
-        self.freq_title.title = freq_title_format(frequency)
-        # update oscillator
-        self.osc.frequency = frequency
+        self.freq_title.title = freq_title_format(frequency)    # update title
+        self.osc.frequency = frequency                          # update oscillator
+        print(f'SLIDER ===> {self.freq_slider.value}, FREQ ===> {self.osc.frequency}')
 
     def adj_amp(self, sender):
         """ Amplitude slider callback """
-        # update frequency title
-        amp = slider_to_amp(self.amp_slider.value)
-        print('SLIDER ===>', self.amp_slider.value, 'AMP ===>', amp)
-        self.amp_title.title = amp_title_format(amp)
-        # update oscillator
-        self.osc.amplitude = amp
+        self.amp_title.title = amp_title_format(self.amp_slider.value)# update title
+        self.osc.amplitude = self.amp_slider.value                                # update oscillator
+        print(f'SLIDER ===> {self.amp_slider.value}, AMP ===> {self.osc.amplitude}')
 
     def change_settings(self, sender):
         """ Settings... callback """
