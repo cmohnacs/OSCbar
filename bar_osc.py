@@ -99,7 +99,6 @@ def amp_title_format(amp):
         dBFS = "-∞"
     if dBFS == 0.0:
         dBFS = "-0.0"
-    print(f'AMP ===> {amp}, dBFS ===> {dBFS}')
     return f"Volume: {dBFS} dBFS"
 
 # -------------------------------- Menu Bar App --------------------------------
@@ -166,7 +165,7 @@ class BarOscApp:
             callback=self.octave_walk)
         self.octave_thirds_button = rumps.MenuItem(         # Octave Walk 1/3
             title="Octave Walk  ⅓",
-            callback=None)
+            callback=self.octave_walk_thirds)
         self.noise_pan_button = rumps.MenuItem(             # Noise Panning
             title="Noise Panning",
             callback=None)
@@ -269,11 +268,15 @@ class BarOscApp:
         #update oscillator
         self.osc.wave_type = 'pink_noise'
 
+    def calibration_window(self):
+        """ Open a window to display calibrationn output """
+        pass
+
     def octave_walk(self, sender):
         """
         Octave Walk callback
 
-        Walk up 9 octaves with sine wave: A0 (27.5 Hz) - A8 (7040 Hz)
+        Walk up 9 octaves with sine wave: A0 (27.5 Hz) - A6 (1760 Hz)
         """
         # stop osc if playing
         if not self.osc.stream is None:
@@ -281,10 +284,12 @@ class BarOscApp:
         # remember settings
         retain_wave = self.osc.wave_type
         retain_freq = self.osc.frequency
-        # play each octave for 1 second
+        # calibration settings
         self.osc.wave_type = 'sine_wave'
         self.osc.frequency = 27.5
-        for octave in range(9):
+        # run it
+        while self.osc.frequency <= 1760:
+            print(self.osc.frequency, 'Hz')
             self.osc.play()
             time.sleep(1)
             self.osc.stop()
@@ -295,12 +300,31 @@ class BarOscApp:
 
     def octave_walk_thirds(self, sender):
         """
-        1/3 Octave Walk callback
+        Octave Walk 1/3 callback
 
-        Walk up 9 octaves by 1/3 octaves: A0 (27.5 Hz) - A8 (7040 Hz)
+        Walk up 9 octaves by 1/3 octaves: A0 (27.5 Hz) - A6 (1760 Hz)
         """
-        pass
+        # stop osc if playing
+        if not self.osc.stream is None:
+            self.stop_osc(sender=None)
+        # remember settings
+        retain_wave = self.osc.wave_type
+        retain_freq = self.osc.frequency
+        # calibration settings
+        self.osc.wave_type = 'sine_wave'
+        self.osc.frequency = 27.5
+        # run it
+        while self.osc.frequency <= 1760:
+            print(self.osc.frequency, 'Hz')
+            self.osc.play()
+            time.sleep(1)
+            self.osc.stop()
+            self.osc.frequency *= 2**(1/3)
+        # return to original settings
+        self.osc.wave_type = retain_wave
+        self.osc.frequency = retain_freq
 
+    @calibration_window
     def noise_panning(self, sender):
         """
         Noise Panning callback

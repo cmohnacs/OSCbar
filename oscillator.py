@@ -66,7 +66,7 @@ def white_noise(sample_block, amplitude, frequency):
 
 def pink_noise(sample_block, amplitude, frequency):
     """
-    generate pink noise samples
+    generate pink noise samples using (real) fast fourier transform
 
     amplitude = volume
     frequency N/A
@@ -102,7 +102,7 @@ class Oscillator:
             nonlocal start_idx
             sample_block = (start_idx + np.arange(frames, dtype=float)) / self.samplerate
             # calculate waveform for given samples
-            print('OSC AMP ===>', self.amplitude)
+            #print('OSCILLATOR ===>', self.wave_type, self.amplitude, self.frequency)
             data = wave_generator(sample_block,
                                         self.wave_type,
                                         self.amplitude,
