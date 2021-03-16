@@ -4,32 +4,16 @@ Bar Osc App
 Calibration oscillator for the macOS menu bar
 """
 
-import warnings
-import functools
 import math
-import time
 import rumps
 from oscillator import Oscillator
 
+#import pdb
 rumps.debug_mode(True)
 
+APP_ICON = 'barosc_logo.png'
 
 # ------------------------------ Helper Functions ------------------------------
-
-def deprecated(func):
-    """
-    This is a decorator which can be used to mark functions as deprecated. It
-    will result in a warning being emitted when the function is used.
-    """
-    @functools.wraps(func)
-    def new_func(*args, **kwargs):
-        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-        warnings.warn("Call to deprecated function {}.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        warnings.simplefilter('default', DeprecationWarning)  # reset filter
-        return func(*args, **kwargs)
-    return new_func
 
 def slider_to_freq(value):
     """
@@ -59,35 +43,6 @@ def freq_title_format(freq):
         title = f"Frequency: {freq} kHz"
     return title
 
-@deprecated
-def slider_to_amp(value):
-    """
-    convert slider value to amplitude with 60dB dynamic range
-
-    y = a·exp(b·x)
-
-    x = volume slider position
-    y = multiplication factor for signed sound wave data
-    a = 1e-3 (60dB dynamic range)
-    b = 6.908 (60dB dynamic range)
-
-    REF: https://www.dr-lex.be/info-stuff/volumecontrols.html
-    """
-    amp = round(1e-3 * math.exp(6.908 * value), 3)
-    # smooth rolloff
-    if value < 0.001:
-        amp *= value * 10
-    return amp
-
-@deprecated
-def amp_to_slider(amp):
-    """
-    convert amplitude to slider value
-
-    x = ln(y/a) / b
-    """
-    return math.log(amp / 1e-3) / 6.908
-
 def amp_title_format(amp):
     """
     e.g. Volume: -0.0 dBFS
@@ -99,7 +54,6 @@ def amp_title_format(amp):
         dBFS = "-∞"
     if dBFS == 0.0:
         dBFS = "-0.0"
-    print(f'AMP ===> {amp}, dBFS ===> {dBFS}')
     return f"Volume: {dBFS} dBFS"
 
 # -------------------------------- Menu Bar App --------------------------------
@@ -113,8 +67,13 @@ class BarOscApp:
         self.wave_type = "sine_wave"
         self.amplitude = 0.5
         self.frequency = 440
+        self.store_wave = None
+        self.store_freq = None
         # application instance
-        self.app = rumps.App("Bar Osc")
+        self.app = rumps.App("Bar Osc", icon=APP_ICON)
+        # create Timer object
+        self.oct_timer = rumps.Timer(self.advance_octave, 2)
+        self.oct_thirds_timer = rumps.Timer(self.advance_octave_thirds, 2)
         # set up menu
         self.build_menu()
         self.osc_ready_menu()
@@ -140,10 +99,10 @@ class BarOscApp:
             max_value=1.0,
             callback=self.adj_amp,
             dimensions=(200, 20))
-        self.sine_wave_button = rumps.MenuItem(                  # Sine Wave
+        self.sine_wave_button = rumps.MenuItem(             # Sine Wave
             title="Sine Wave",
             callback=None)
-        self.square_wave_button = rumps.MenuItem(                # Square Wave
+        self.square_wave_button = rumps.MenuItem(           # Square Wave
             title="Square Wave",
             callback=self.set_square_wave)
         self.white_noise_button = rumps.MenuItem(           # White Noise
@@ -163,10 +122,10 @@ class BarOscApp:
             dimensions=(200, 20))
         self.octave_button = rumps.MenuItem(                # Octave Walk
             title="Octave Walk",
-            callback=self.octave_walk)
+            callback=self.begin_octave_walk)
         self.octave_thirds_button = rumps.MenuItem(         # Octave Walk 1/3
             title="Octave Walk  ⅓",
-            callback=None)
+            callback=self.begin_octave_walk_thirds)
         self.noise_pan_button = rumps.MenuItem(             # Noise Panning
             title="Noise Panning",
             callback=None)
@@ -199,13 +158,13 @@ class BarOscApp:
 
     def osc_ready_menu(self):
         """ menu while not playing osc """
-        self.app.title = "🎛"
+        #self.app.title = "🎛"
         self.start_button.set_callback(self.start_osc)
         self.stop_button.set_callback(None)
 
     def osc_busy_menu(self):
         """ menu while playing osc """
-        self.app.title = "🔊"
+        #self.app.title = "🔊"
         self.start_button.set_callback(None)
         self.stop_button.set_callback(self.stop_osc)
 
@@ -269,11 +228,73 @@ class BarOscApp:
         #update oscillator
         self.osc.wave_type = 'pink_noise'
 
-    def octave_walk(self, sender):
+    def advance_octave(self, sender):
+        """
+        Timer callback
+        """
+        if self.osc.stream:
+            self.stop_osc(sender=None)
+        self.osc.frequency *= 2
+        if self.osc.frequency > 1760:
+            self.oct_timer.stop()
+            # return to original settings
+            self.osc.wave_type = self.store_wave
+            self.osc.frequency = self.store_freq
+        else:
+            print(self.osc.frequency, 'Hz')
+            rumps.notification( title='Calibration Mode',
+                                subtitle='Octave Walk',
+                                message=freq_title_format(self.osc.frequency),
+                                sound=False,
+                                icon=APP_ICON)
+
+            self.osc.play()
+
+    def advance_octave_thirds(self, sender):
+        """
+        Timer callback
+        """
+        if self.osc.stream:
+            self.stop_osc(sender=None)
+        self.osc.frequency *= 2**(1/3)
+        if self.osc.frequency > 1760:
+            self.oct_thirds_timer.stop()
+            # return to original settings
+            self.osc.wave_type = self.store_wave
+            self.osc.frequency = self.store_freq
+        else:
+            print(self.osc.frequency, 'Hz')
+            rumps.notification( title='Calibration Mode',
+                                subtitle='Octave Walk  ⅓',
+                                message=freq_title_format(self.osc.frequency),
+                                sound=False,
+                                icon=APP_ICON)
+
+            self.osc.play()
+
+    def begin_octave_walk(self, sender):
         """
         Octave Walk callback
 
-        Walk up 9 octaves with sine wave: A0 (27.5 Hz) - A8 (7040 Hz)
+        Walk up 9 octaves with sine wave: A0 (27.5 Hz) - A6 (1760 Hz)
+        """
+        # stop osc if playing
+        if self.osc.stream:
+            self.stop_osc(sender=None)
+        # remember settings
+        self.store_wave = self.osc.wave_type
+        self.store_freq = self.osc.frequency
+        # initial calibration settings
+        self.osc.wave_type = 'sine_wave'
+        self.osc.frequency = 27.5
+        # begin
+        self.oct_timer.start()
+
+    def begin_octave_walk_thirds(self, sender):
+        """
+        Octave Walk 1/3 callback
+
+        Walk up 9 octaves by 1/3 octaves: A0 (27.5 Hz) - A6 (1760 Hz)
         """
         # stop osc if playing
         if not self.osc.stream is None:
@@ -281,25 +302,11 @@ class BarOscApp:
         # remember settings
         retain_wave = self.osc.wave_type
         retain_freq = self.osc.frequency
-        # play each octave for 1 second
+        # calibration settings
         self.osc.wave_type = 'sine_wave'
         self.osc.frequency = 27.5
-        for octave in range(9):
-            self.osc.play()
-            time.sleep(1)
-            self.osc.stop()
-            self.osc.frequency *= 2
-        # return to original settings
-        self.osc.wave_type = retain_wave
-        self.osc.frequency = retain_freq
-
-    def octave_walk_thirds(self, sender):
-        """
-        1/3 Octave Walk callback
-
-        Walk up 9 octaves by 1/3 octaves: A0 (27.5 Hz) - A8 (7040 Hz)
-        """
-        pass
+        # begin
+        self.oct_thirds_timer.start()
 
     def noise_panning(self, sender):
         """
@@ -319,7 +326,7 @@ class BarOscApp:
     def adj_amp(self, sender):
         """ Amplitude slider callback """
         self.amp_title.title = amp_title_format(self.amp_slider.value)# update title
-        self.osc.amplitude = self.amp_slider.value                                # update oscillator
+        self.osc.amplitude = self.amp_slider.value                    # update oscillator
         print(f'SLIDER ===> {self.amp_slider.value}, AMP ===> {self.osc.amplitude}')
 
     def change_settings(self, sender):

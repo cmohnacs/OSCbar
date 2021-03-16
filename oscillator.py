@@ -7,19 +7,6 @@ import sounddevice as sd
 from numpy.fft import rfft, irfft
 
 
-# ------------------------------ Helper Functions ------------------------------
-
-def amplitude_limit(amplitude):
-    """
-    amplitude should have min/max (0.0-1.0) to avoid clipping waveforms
-    """
-    if amplitude > 1.0:
-        amplitude = 1.0
-    elif amplitude < 0.0:
-        amplitude = 0.0
-    return amplitude
-
-
 # ------------------------------ Wave Generators -------------------------------
 
 def wave_generator(sample_block, wave_type='sine_wave', amplitude=0.5, frequency=440):
@@ -66,7 +53,7 @@ def white_noise(sample_block, amplitude, frequency):
 
 def pink_noise(sample_block, amplitude, frequency):
     """
-    generate pink noise samples
+    generate pink noise samples using (real) fast fourier transform
 
     amplitude = volume
     frequency N/A
@@ -87,8 +74,28 @@ class Oscillator:
         self.stream = None
         self.samplerate = samplerate
         self.wave_type = wave_type
-        self.amplitude = amplitude_limit(amplitude)
+        self.amplitude = amplitude
         self.frequency = frequency
+
+    @property
+    def amplitude(self):
+        return self._amplitude
+
+    @amplitude.setter
+    def amplitude(self, amp):
+        if amp > 1.0 or amp < 0.0:
+            raise Exception("Amplitude must be in range 0.0 - 1.0")
+        self._amplitude = amp
+
+    @property
+    def frequency(self):
+        return self._frequency
+
+    @frequency.setter
+    def frequency(self, freq):
+        if freq < 20 or freq > 20000:
+            raise Exception("Frequency must be in range 20 - 20000")
+        self._frequency = freq
 
     def play(self):
         """ stream to output """
@@ -102,7 +109,7 @@ class Oscillator:
             nonlocal start_idx
             sample_block = (start_idx + np.arange(frames, dtype=float)) / self.samplerate
             # calculate waveform for given samples
-            print('OSC AMP ===>', self.amplitude)
+            #print('OSCILLATOR ===>', self.wave_type, self.amplitude, self.frequency)
             data = wave_generator(sample_block,
                                         self.wave_type,
                                         self.amplitude,
@@ -132,7 +139,7 @@ if __name__ == '__main__':
 
     # beeps and noises
     SR = 44100
-    AMP = 0.2
+    AMP = 0.5
     FREQ = 440
 
     osc = Oscillator(   samplerate=SR,
