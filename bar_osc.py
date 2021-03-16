@@ -113,7 +113,7 @@ class BarOscApp:
         self.amplitude = 0.5
         self.frequency = 440
         # application instance
-        self.app = rumps.App("Bar Osc")
+        self.app = rumps.App("Bar Osc", icon='barosc_logo.png')
         # set up menu
         self.build_menu()
         self.osc_ready_menu()
@@ -139,10 +139,10 @@ class BarOscApp:
             max_value=1.0,
             callback=self.adj_amp,
             dimensions=(200, 20))
-        self.sine_wave_button = rumps.MenuItem(                  # Sine Wave
+        self.sine_wave_button = rumps.MenuItem(             # Sine Wave
             title="Sine Wave",
             callback=None)
-        self.square_wave_button = rumps.MenuItem(                # Square Wave
+        self.square_wave_button = rumps.MenuItem(           # Square Wave
             title="Square Wave",
             callback=self.set_square_wave)
         self.white_noise_button = rumps.MenuItem(           # White Noise
@@ -198,13 +198,13 @@ class BarOscApp:
 
     def osc_ready_menu(self):
         """ menu while not playing osc """
-        self.app.title = "🎛"
+        #self.app.title = "🎛"
         self.start_button.set_callback(self.start_osc)
         self.stop_button.set_callback(None)
 
     def osc_busy_menu(self):
         """ menu while playing osc """
-        self.app.title = "🔊"
+        #self.app.title = "🔊"
         self.start_button.set_callback(None)
         self.stop_button.set_callback(self.stop_osc)
 
@@ -343,7 +343,7 @@ class BarOscApp:
     def adj_amp(self, sender):
         """ Amplitude slider callback """
         self.amp_title.title = amp_title_format(self.amp_slider.value)# update title
-        self.osc.amplitude = self.amp_slider.value                                # update oscillator
+        self.osc.amplitude = self.amp_slider.value                    # update oscillator
         print(f'SLIDER ===> {self.amp_slider.value}, AMP ===> {self.osc.amplitude}')
 
     def change_settings(self, sender):
