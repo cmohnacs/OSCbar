@@ -102,7 +102,7 @@ class BarOscApp:
             dimensions=(200, 20))
         self.sine_wave_button = rumps.MenuItem(             # Sine Wave
             title="Sine Wave",
-            callback=None)
+            callback=self.set_sine_wave)
         self.square_wave_button = rumps.MenuItem(           # Square Wave
             title="Square Wave",
             callback=self.set_square_wave)
@@ -149,11 +149,26 @@ class BarOscApp:
 
 # ------------------------ Menu Bar App: Menu UI Methods -----------------------
 
+    def remove_checkmark(self):
+        """ clear wave type checkmarks from menu state """
+        for item in self.app.menu:
+            if hasattr(self.app.menu[item], 'state'):
+                if self.app.menu[item].state == 1:
+                    self.app.menu[item].state = 0
+
     def osc_ready_menu(self):
         """ menu while not playing osc """
         #self.app.title = "🎛"
         self.start_button.set_callback(self.start_osc)
         self.stop_button.set_callback(None)
+
+        self.remove_checkmark()
+        for item in self.app.menu:
+            try:
+                if self.osc.wave_type in self.app.menu[item].callback.__name__:
+                    self.app.menu[item].state = 1
+            except AttributeError:
+                pass
 
     def osc_busy_menu(self):
         """ menu while playing osc """
@@ -161,13 +176,10 @@ class BarOscApp:
         self.start_button.set_callback(None)
         self.stop_button.set_callback(self.stop_osc)
 
-    def wave_change_menu(self, old_wave_type, new_wave_type):
+    def wave_change_menu(self, sender):
         """ menu change when selecting new wave type """
-        try:
-            eval("self." + new_wave_type + "_button.set_callback(None)")
-            eval("self." + old_wave_type + "_button.set_callback(self.set_" + old_wave_type + ")")
-        except NameError as wave_error:
-            raise NotImplementedError("Wave Type (methods) not available") from wave_error
+        self.remove_checkmark()
+        sender.state = 1
 
 
 # --------------------------- Menu Bar App: Callbacks --------------------------
@@ -184,21 +196,22 @@ class BarOscApp:
 
     def set_sine_wave(self, sender):
         """ Sine Wave callback """
-        self.wave_change_menu(self.osc.wave_type, 'sine_wave')
+        self.wave_change_menu(sender)
         self.osc.wave_type = 'sine_wave'
 
     def set_square_wave(self, sender):
-        self.wave_change_menu(self.osc.wave_type, 'square_wave')
+        """ Square Wave callback """
+        self.wave_change_menu(sender)
         self.osc.wave_type = 'square_wave'
 
     def set_white_noise(self, sender):
         """ White Noise callback """
-        self.wave_change_menu(self.osc.wave_type, 'white_noise')
+        self.wave_change_menu(sender)
         self.osc.wave_type = 'white_noise'
 
     def set_pink_noise(self, sender):
         """ Pink Noise callback """
-        self.wave_change_menu(self.osc.wave_type, 'pink_noise')
+        self.wave_change_menu(sender)
         self.osc.wave_type = 'pink_noise'
 
     def advance_octave(self, sender):
@@ -213,6 +226,7 @@ class BarOscApp:
             # return to original settings
             self.osc.wave_type = self.store_wave
             self.osc.frequency = self.store_freq
+            self.osc_ready_menu()
         else:
             rumps.notification( title='Octave Walk',
                                 subtitle=None,
@@ -234,6 +248,7 @@ class BarOscApp:
             # return to original settings
             self.osc.wave_type = self.store_wave
             self.osc.frequency = self.store_freq
+            self.osc_ready_menu()
         else:
             rumps.notification( title='Octave Walk  ⅓',
                                 subtitle=None,
