@@ -7,65 +7,11 @@ import sounddevice as sd
 from numpy.fft import rfft, irfft
 
 
-# ------------------------------ Wave Generators -------------------------------
+WAVES =    ['sine_wave',
+            'square_wave',
+            'white_noise',
+            'pink_noise']
 
-def wave_generator(sample_block, wave_type='sine_wave', amplitude=0.5, frequency=440):
-    """
-    Wave type selector
-    Default oscillator values
-    """
-    wave_generators = { 'sine_wave':   sine_wave,
-                        'square_wave': square_wave,
-                        'white_noise': white_noise,
-                        'pink_noise':  pink_noise }
-
-    return wave_generators[wave_type](sample_block, amplitude, frequency)
-
-def sine_wave(sample_block, amplitude, frequency):
-    """
-    generate sine wave samples
-
-    amplitude = volume
-    frequency = Hz
-    """
-    return amplitude * np.sin(2 * np.pi * frequency * sample_block)
-
-def square_wave(sample_block, amplitude, frequency):
-    """
-    generate square wave samples
-
-    amplitude = volume
-    frequency = Hz
-    """
-    wave_block = sine_wave(sample_block, amplitude, frequency)
-    wave_block[wave_block > 0] = amplitude
-    wave_block[wave_block < 0] = -amplitude
-    return wave_block
-
-def white_noise(sample_block, amplitude, frequency):
-    """
-    generate white noise samples
-
-    amplitude = volume
-    frequency N/A
-    """
-    return amplitude * np.random.uniform(-1, 1, sample_block.size)
-
-def pink_noise(sample_block, amplitude, frequency):
-    """
-    generate pink noise samples using (real) fast fourier transform
-
-    amplitude = volume
-    frequency N/A
-    """
-    wave_block = white_noise(sample_block, amplitude, frequency)
-    X = rfft(wave_block)
-    S = np.sqrt(np.arange(X.size)+1.)
-    Y = irfft(X/S, wave_block.size)
-    return Y
-
-
-# --------------------------------- Oscillator ---------------------------------
 
 class Oscillator:
     """ Oscillator """
@@ -76,6 +22,16 @@ class Oscillator:
         self.wave_type = wave_type
         self.amplitude = amplitude
         self.frequency = frequency
+
+    @property
+    def wave_type(self):
+        return self._wave_type
+
+    @wave_type.setter
+    def wave_type(self, wave_type):
+        if wave_type not in WAVES:
+            raise Exception("Wave Type is not defined")
+        self._wave_type = wave_type
 
     @property
     def amplitude(self):
@@ -97,6 +53,53 @@ class Oscillator:
             raise Exception("Frequency must be in range 20 - 20000")
         self._frequency = freq
 
+    @staticmethod
+    def sine_wave(sample_block, amplitude, frequency):
+        """
+        generate sine wave samples
+
+        amplitude = volume
+        frequency = Hz
+        """
+        return amplitude * np.sin(2 * np.pi * frequency * sample_block)
+
+    @staticmethod
+    def square_wave(sample_block, amplitude, frequency):
+        """
+        generate square wave samples
+
+        amplitude = volume
+        frequency = Hz
+        """
+        wave_block = Oscillator.sine_wave(sample_block, amplitude, frequency)
+        wave_block[wave_block > 0] = amplitude
+        wave_block[wave_block < 0] = -amplitude
+        return wave_block
+
+    @staticmethod
+    def white_noise(sample_block, amplitude, frequency):
+        """
+        generate white noise samples
+
+        amplitude = volume
+        frequency N/A
+        """
+        return amplitude * np.random.uniform(-1, 1, sample_block.size)
+
+    @staticmethod
+    def pink_noise(sample_block, amplitude, frequency):
+        """
+        generate pink noise samples using (real) fast fourier transform
+
+        amplitude = volume
+        frequency N/A
+        """
+        wave_block = Oscillator.white_noise(sample_block, amplitude, frequency)
+        X = rfft(wave_block)
+        S = np.sqrt(np.arange(X.size)+1.)
+        Y = irfft(X/S, wave_block.size)
+        return Y
+
     def play(self):
         """ stream to output """
 
@@ -109,11 +112,11 @@ class Oscillator:
             nonlocal start_idx
             sample_block = (start_idx + np.arange(frames, dtype=float)) / self.samplerate
             # calculate waveform for given samples
-            #print('OSCILLATOR ===>', self.wave_type, self.amplitude, self.frequency)
-            data = wave_generator(sample_block,
-                                        self.wave_type,
-                                        self.amplitude,
-                                        self.frequency)
+            try:
+                data = eval("Oscillator." + self.wave_type +
+                            "(sample_block, self.amplitude, self.frequency)")
+            except NameError as wave_error:
+                raise NotImplementedError("Wave Type not available") from wave_error
             # 2-D array with shape (_,1)
             outdata[:] = data.reshape(-1,1)
             # update index
@@ -136,40 +139,15 @@ class Oscillator:
 if __name__ == '__main__':
 
     import time
-
     # beeps and noises
     SR = 44100
     AMP = 0.5
     FREQ = 440
-
-    osc = Oscillator(   samplerate=SR,
-                        wave_type='sine_wave',
-                        amplitude=AMP,
-                        frequency=FREQ)
-    osc.play()
-    time.sleep(0.5)
-    osc.stop()
-
-    osc = Oscillator(   samplerate=SR,
-                        wave_type='square_wave',
-                        amplitude=AMP,
-                        frequency=FREQ)
-    osc.play()
-    time.sleep(0.5)
-    osc.stop()
-
-    osc = Oscillator(   samplerate=SR,
-                        wave_type='white_noise',
-                        amplitude=AMP,
-                        frequency=FREQ)
-    osc.play()
-    time.sleep(0.5)
-    osc.stop()
-
-    osc = Oscillator(   samplerate=SR,
-                        wave_type='pink_noise',
-                        amplitude=AMP,
-                        frequency=FREQ)
-    osc.play()
-    time.sleep(0.5)
-    osc.stop()
+    for wave in WAVES:
+        osc = Oscillator(   samplerate=SR,
+                            wave_type=wave,
+                            amplitude=AMP,
+                            frequency=FREQ)
+        osc.play()
+        time.sleep(0.5)
+        osc.stop()
