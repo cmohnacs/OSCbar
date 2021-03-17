@@ -6,7 +6,6 @@ Calibration oscillator for the macOS menu bar
 
 import math
 import rumps
-import sounddevice as sd
 from oscillator import Oscillator
 
 rumps.debug_mode(True)
