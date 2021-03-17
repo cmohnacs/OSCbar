@@ -6,7 +6,7 @@ import numpy as np
 import sounddevice as sd
 from numpy.fft import rfft, irfft
 
-
+# wave types available to oscillator, implemented in Oscillator class
 WAVES =    ['sine_wave',
             'square_wave',
             'white_noise',
