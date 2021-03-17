@@ -7,14 +7,15 @@ import sounddevice as sd
 from numpy.fft import rfft, irfft
 
 
-def get_samplerate():
-    return sd.query_devices(kind='output')['default_samplerate']
-
 # wave types available to oscillator, implemented in Oscillator class
 WAVES =    ['sine_wave',
             'square_wave',
             'white_noise',
             'pink_noise']
+
+def get_samplerate():
+    """ get samplerate from default output """
+    return sd.query_devices(kind='output')['default_samplerate']
 
 
 class Oscillator:
