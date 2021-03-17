@@ -6,6 +6,10 @@ import numpy as np
 import sounddevice as sd
 from numpy.fft import rfft, irfft
 
+
+def get_samplerate():
+    return sd.query_devices(kind='output')['default_samplerate']
+
 # wave types available to oscillator, implemented in Oscillator class
 WAVES =    ['sine_wave',
             'square_wave',
@@ -16,9 +20,9 @@ WAVES =    ['sine_wave',
 class Oscillator:
     """ Oscillator """
 
-    def __init__(self, samplerate, wave_type, amplitude, frequency):
+    def __init__(self, wave_type, amplitude, frequency):
         self.stream = None
-        self.samplerate = samplerate
+        self.samplerate = get_samplerate()
         self.wave_type = wave_type
         self.amplitude = amplitude
         self.frequency = frequency
@@ -137,15 +141,12 @@ class Oscillator:
 # ---------------------------------- Run Time ----------------------------------
 
 if __name__ == '__main__':
-
     import time
     # beeps and noises
-    SR = 44100
     AMP = 0.5
     FREQ = 440
     for wave in WAVES:
-        osc = Oscillator(   samplerate=SR,
-                            wave_type=wave,
+        osc = Oscillator(   wave_type=wave,
                             amplitude=AMP,
                             frequency=FREQ)
         osc.play()

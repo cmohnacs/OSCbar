@@ -6,6 +6,7 @@ Calibration oscillator for the macOS menu bar
 
 import math
 import rumps
+import sounddevice as sd
 from oscillator import Oscillator
 
 rumps.debug_mode(True)
@@ -62,7 +63,6 @@ class BarOscApp:
 
     def __init__(self):
         # initial oscillator settings
-        self.samplerate = 44100
         self.wave_type = "sine_wave"
         self.amplitude = 0.5
         self.frequency = 440
@@ -77,8 +77,7 @@ class BarOscApp:
         self.app = rumps.App(app_title, icon=APP_ICON)
         self.oct_timer = rumps.Timer(self.advance_octave, interval)
         self.oct_thirds_timer = rumps.Timer(self.advance_octave_thirds, interval)
-        self.osc = Oscillator(  self.samplerate,
-                                self.wave_type,
+        self.osc = Oscillator(  self.wave_type,
                                 self.amplitude,
                                 self.frequency)
         # set up menu
