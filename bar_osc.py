@@ -237,7 +237,7 @@ class BarOscApp:
         self.osc.wave_type = wave_type
         self.osc.frequency = frequency
 
-    def advance_calibration(self, factor, max_freq, title):
+    def advance_frequency(self, sender, factor, max_freq, title):
         """
         Increase frequency by factor until max frequency is reached,
         then stop the timer
@@ -260,12 +260,6 @@ class BarOscApp:
                                 icon=APP_ICON)
 
             self.osc.play()
-
-    def advance_frequency(self, sender, factor, max_freq, title):
-        """
-        Timer callback
-        """
-        self.advance_calibration(factor, max_freq, title)
 
     def begin_octave_walk(self, sender, timer):
         """
