@@ -1,4 +1,6 @@
-""" Oscillator for Bar Osc App """
+"""
+Oscillator for Bar Osc App
+"""
 
 import sys
 import numpy as np
