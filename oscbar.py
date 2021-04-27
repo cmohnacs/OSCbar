@@ -11,7 +11,7 @@ from oscillator import Oscillator
 rumps.debug_mode(True)
 
 
-APP_ICON = 'oscbar_logo.png'
+APP_ICON = 'media/oscbar_logo.png'
 
 # ------------------------------ Helper Functions ------------------------------
 

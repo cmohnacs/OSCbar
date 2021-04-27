@@ -1,5 +1,5 @@
 """
-Oscillator for Oscbar App
+Oscillator for OSCbar App
 """
 
 import sys
