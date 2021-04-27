@@ -25,9 +25,8 @@ The application uses ```sounddevice``` and ```rumps``` libraries.  ```oscillator
 ## Download
 Visit the [project page](https://cmohnacs.github.io/oscbar/) to download ```oscbar.app```.
 
-![alt text](https://github.com/cmohnacs/oscbar/blob/main/media/oscbar_logo-250x250.png?raw=true)
-
 ### Support or Contact
 
 Get in touch to report bugs or request new features.
 
+![alt text](https://github.com/cmohnacs/oscbar/blob/main/media/oscbar_logo-250x250.png?raw=true)
