@@ -1,37 +1,33 @@
-## Welcome to GitHub Pages
+OSCbar lives in the macOS menu bar and functions as an on-hand oscillator for calibrating/testing audio equipment or room response.  It is designed to be a lighweight and accessible sound generator.  Thes feature set is intentionally minimal to replace those circustamces when opening a DAW is overkill.
 
-You can use the [editor on GitHub](https://github.com/cmohnacs/oscbar/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+![alt text](https://github.com/cmohnacs/oscbar/blob/main/media/appview.png?raw=true)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Features
+Generate an waves or noise from the macOS menu bar.  Cmd-click on the icon to rearrange location within the menubar.
 
-### Markdown
+#### Wave Types
+- Sine wave
+- Square wave
+- White noise
+- Pink noise
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+**Freq range:** 20 - 20k Hz.
 
-```markdown
-Syntax highlighted code block
+**Callibration modes:** Use octave walks to check the low-end response of your studio or listening room.
 
-# Header 1
-## Header 2
-### Header 3
+Volume displayed dbFS.  Maximum amplitude is determined by your device's interface.
 
-- Bulleted
-- List
 
-1. Numbered
-2. List
+## Technical
+The application uses ```sounddevice``` and ```rumps``` libraries.  ```oscillator.py``` is an oscillator class that can be implemented in other ```sounddevice``` applications.  
 
-**Bold** and _Italic_ and `Code` text
 
-[Link](url) and ![Image](src)
-```
+## Download
+Visit the [project page](https://cmohnacs.github.io/oscbar/) to download ```oscbar.app```.
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/cmohnacs/oscbar/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+![alt text](https://github.com/cmohnacs/oscbar/blob/main/media/oscbar_logo-250x250.png?raw=true)
 
 ### Support or Contact
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+Get in touch to report bugs or request new features.
+
