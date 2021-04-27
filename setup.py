@@ -1,7 +1,7 @@
 """ setup the app """
 from setuptools import setup
 
-APP = ['bar_osc.py']
+APP = ['oscbar.py']
 DATA_FILES = []
 OPTIONS = {
     'argv_emulation': True,
@@ -15,7 +15,7 @@ OPTIONS = {
 
 setup(
     app=APP,
-    name='Bar Osc',
+    name='Oscbar',
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'], install_requires=['rumps', 'sounddevice']

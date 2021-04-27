@@ -1,5 +1,5 @@
 """
-Bar Osc App
+Oscbar App
 
 Calibration oscillator for the macOS menu bar
 """
@@ -11,7 +11,7 @@ from oscillator import Oscillator
 rumps.debug_mode(True)
 
 
-APP_ICON = 'barosc_logo.png'
+APP_ICON = 'oscbar_logo.png'
 
 # ------------------------------ Helper Functions ------------------------------
 
@@ -58,12 +58,12 @@ def amp_title_format(amp):
 
 # -------------------------------- Menu Bar App --------------------------------
 
-class BarOscApp:
-    """ Bar Osc object """
+class OscbarApp:
+    """ Oscbar object """
 
     def __init__(self):
         # config
-        app_title = "Bar Osc"
+        app_title = "Oscbar"
         interval = 2 # seconds per calibration step
 
         # initial oscillator settings
@@ -290,5 +290,5 @@ class BarOscApp:
 # ---------------------------------- Run Time ----------------------------------
 
 if __name__ == '__main__':
-    app = BarOscApp()
+    app = OscbarApp()
     app.run()

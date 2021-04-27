@@ -1,5 +1,5 @@
 """
-Oscillator for Bar Osc App
+Oscillator for Oscbar App
 """
 
 import sys
@@ -29,6 +29,12 @@ class Oscillator:
         self.wave_type = wave_type
         self.amplitude = amplitude
         self.frequency = frequency
+
+    def __str__(self):
+        return f"""~~~ {self.__class__.__name__.upper()} ===> SAMPLERATE: {self.samplerate},
+                    WAVE: {self.wave_type},
+                    AMPL: {self.amplitude},
+                    FREQ: {self.frequency} Hz"""
 
     @property
     def wave_type(self):
@@ -152,6 +158,7 @@ if __name__ == '__main__':
         osc = Oscillator(   wave_type=wave,
                             amplitude=AMP,
                             frequency=FREQ)
+        print(osc)
         osc.play()
         time.sleep(0.5)
         osc.stop()
