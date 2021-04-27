@@ -4,7 +4,7 @@ OSCbar lives in the macOS menu bar and functions as an on-hand oscillator for ca
 ![alt text](https://github.com/cmohnacs/oscbar/blob/main/media/appview.png?raw=true)
 
 ## Features
-Volume displayed dbFS.  Maximum amplitude is determined by your device's interface.
+Generate an waves or noise from the macOS menu bar.  Cmd-click on the icon to rearrange location within the menubar.
 
 #### Wave Types
 - Sine wave
@@ -14,8 +14,10 @@ Volume displayed dbFS.  Maximum amplitude is determined by your device's interfa
 
 **Freq range:** 20 - 20k Hz.
 
-#### Callibration modes
-Use octave walks to check the low-end response of your studio or listening room.
+**Callibration modes:** Use octave walks to check the low-end response of your studio or listening room.
+
+Volume displayed dbFS.  Maximum amplitude is determined by your device's interface.
+
 
 ## Technical
 The application uses ```sounddevice``` and ```rumps``` libraries.  ```oscillator.py``` is an oscillator class that can be implemented in other ```sounddevice``` applications.  
